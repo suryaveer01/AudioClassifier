@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 import torchaudio
+import matplotlib.pyplot as plt
 
 
 class UrbanSoundDataset(Dataset):
@@ -69,6 +70,15 @@ class UrbanSoundDataset(Dataset):
 
     def _get_audio_sample_label(self, index):
         return self.annotations.iloc[index, 6]
+    
+def plot_spectrogram(specgram, title=None, ylabel="freq_bin"):
+    fig, axs = plt.subplots(1, 1)
+    axs.set_title(title or "Spectrogram (db)")
+    axs.set_ylabel(ylabel)
+    axs.set_xlabel("frame")
+    im = axs.imshow(torch.log10(specgram) * 10, origin="lower", aspect="auto")
+    fig.colorbar(im, ax=axs)
+    plt.show(block=True)
 
 
 if __name__ == "__main__":
@@ -92,20 +102,24 @@ if __name__ == "__main__":
 
     mfcc_transform = torchaudio.transforms.MFCC(sample_rate=SAMPLE_RATE,n_mfcc=64)
 
-    # usd = UrbanSoundDataset(ANNOTATIONS_FILE,
-    #                         AUDIO_DIR,
-    #                         mel_spectrogram,
-    #                         SAMPLE_RATE,
-    #                         NUM_SAMPLES,
-    #                         device)
-    
     usd = UrbanSoundDataset(ANNOTATIONS_FILE,
                             AUDIO_DIR,
-                            mfcc_transform,
+                            mel_spectrogram,
                             SAMPLE_RATE,
                             NUM_SAMPLES,
                             device)
+    
+    # usd = UrbanSoundDataset(ANNOTATIONS_FILE,
+    #                         AUDIO_DIR,
+    #                         mfcc_transform,
+    #                         SAMPLE_RATE,
+    #                         NUM_SAMPLES,
+    #                         device)
     print(f"There are {len(usd)} samples in the dataset.")
     print(str(torchaudio.get_audio_backend()))
-    signal, label = usd[0]
-
+    signal, label = usd[10]
+    # plt.imshow(signal[0], interpolation="nearest", origin="lower", aspect="auto")
+    # # plt.colorbar()
+    # plt.show()
+    plot_spectrogram(signal[0], title="MelSpectrogram - torchaudio", ylabel="mel freq")
+    # plot_spectrogram(signal[0], title="MFCC - torchaudio", ylabel="MFCC")
