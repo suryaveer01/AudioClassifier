@@ -8746,3 +8746,5 @@
 .data/UrbanSound8K/audio/fold9/DS_Store
 .data/UrbanSound8K/metadata/DS_Store
 .data/UrbanSound8K/metadata/UrbanSound8K.csv
+feedforwardnet_resnet34_melSpectrogram.pth
+vggish_model.ckpt

@@ -3,20 +3,33 @@ import torchaudio
 from torch import nn
 from torch.utils.data import DataLoader
 
-from urbansounddataset import UrbanSoundDataset
-from cnn import CNNNetwork
+from dataset import UrbanSoundDataset
+from audioclassifiernetwork import CNNNetwork
+
+import torchaudio.models as models
 
 
 BATCH_SIZE = 128
 EPOCHS = 10
 LEARNING_RATE = 0.001
 
-ANNOTATIONS_FILE = "/home/valerio/datasets/UrbanSound8K/metadata/UrbanSound8K.csv"
-AUDIO_DIR = "/home/valerio/datasets/UrbanSound8K/audio"
+ANNOTATIONS_FILE = ".data/UrbanSound8K/metadata/UrbanSound8K.csv"
+AUDIO_DIR = ".data/UrbanSound8K/audio"
 SAMPLE_RATE = 22050
 NUM_SAMPLES = 22050
 
+if torch.cuda.is_available():
+    device = "cuda"
+else:
+    device = "cpu"
+print(f"Using device {device}")
 
+mel_spectrogram = torchaudio.transforms.MelSpectrogram(
+    sample_rate=SAMPLE_RATE,
+    n_fft=1024,
+    hop_length=512,
+    n_mels=64
+)
 
 
 def create_data_loader(train_data, batch_size):
@@ -83,17 +96,24 @@ if __name__ == "__main__":
     train_dataloader = create_data_loader(usd, BATCH_SIZE)
 
     # construct model and assign it to device
-    cnn = CNNNetwork().to(device)
-    print(cnn)
+    # cnn = CNNNetwork().to(device)
+    # # print(cnn)
 
+    # Define the PyTorch model
+    vggish_model = models.vggish(pretrained=False)
+
+    # Load the weights from the TensorFlow checkpoint file
+    state_dict = torch.load('vggish_model.ckpt', map_location=torch.device('cpu'))
+    vggish_model.load_state_dict(state_dict)
+    vggish_model = vggish_model.to(device)
     # initialise loss funtion + optimiser
     loss_fn = nn.CrossEntropyLoss()
-    optimiser = torch.optim.Adam(cnn.parameters(),
+    optimiser = torch.optim.Adam(vggish_model.parameters(),
                                  lr=LEARNING_RATE)
 
     # train model
-    train(cnn, train_dataloader, loss_fn, optimiser, device, EPOCHS)
+    train(vggish_model, train_dataloader, loss_fn, optimiser, device, EPOCHS)
 
     # save model
-    torch.save(cnn.state_dict(), "feedforwardnet.pth")
+    torch.save(vggish_model.state_dict(), "vggish_net.pth")
     print("Trained feed forward net saved at feedforwardnet.pth")

@@ -90,9 +90,18 @@ if __name__ == "__main__":
         n_mels=64
     )
 
+    mfcc_transform = torchaudio.transforms.MFCC(sample_rate=SAMPLE_RATE,n_mfcc=64)
+
+    # usd = UrbanSoundDataset(ANNOTATIONS_FILE,
+    #                         AUDIO_DIR,
+    #                         mel_spectrogram,
+    #                         SAMPLE_RATE,
+    #                         NUM_SAMPLES,
+    #                         device)
+    
     usd = UrbanSoundDataset(ANNOTATIONS_FILE,
                             AUDIO_DIR,
-                            mel_spectrogram,
+                            mfcc_transform,
                             SAMPLE_RATE,
                             NUM_SAMPLES,
                             device)

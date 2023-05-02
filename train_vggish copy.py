@@ -3,20 +3,36 @@ import torchaudio
 from torch import nn
 from torch.utils.data import DataLoader
 
-from urbansounddataset import UrbanSoundDataset
-from cnn import CNNNetwork
+from dataset import UrbanSoundDataset
+from audioclassifiernetwork import CNNNetwork
+
+import torchaudio.models as models
+
+import tensorflow as tf
+
 
 
 BATCH_SIZE = 128
 EPOCHS = 10
 LEARNING_RATE = 0.001
 
-ANNOTATIONS_FILE = "/home/valerio/datasets/UrbanSound8K/metadata/UrbanSound8K.csv"
-AUDIO_DIR = "/home/valerio/datasets/UrbanSound8K/audio"
+ANNOTATIONS_FILE = ".data/UrbanSound8K/metadata/UrbanSound8K.csv"
+AUDIO_DIR = ".data/UrbanSound8K/audio"
 SAMPLE_RATE = 22050
 NUM_SAMPLES = 22050
 
+if torch.cuda.is_available():
+    device = "cuda"
+else:
+    device = "cpu"
+print(f"Using device {device}")
 
+mel_spectrogram = torchaudio.transforms.MelSpectrogram(
+    sample_rate=SAMPLE_RATE,
+    n_fft=1024,
+    hop_length=512,
+    n_mels=64
+)
 
 
 def create_data_loader(train_data, batch_size):
@@ -83,17 +99,26 @@ if __name__ == "__main__":
     train_dataloader = create_data_loader(usd, BATCH_SIZE)
 
     # construct model and assign it to device
-    cnn = CNNNetwork().to(device)
-    print(cnn)
+    # cnn = CNNNetwork().to(device)
+    # # print(cnn)
+    # Load the VGGish model
+    vggish = tf.keras.models.load_model('vggish.h5')
+   # Train the model
+    vggish.fit(train_dataloader, epochs=10)
 
+    # Evaluate the model on the validation set
+    loss, accuracy = vggish.evaluate(validation_spectrograms)
+
+    # Save the model
+    vggish.save('vggish_trained.h5')
     # initialise loss funtion + optimiser
     loss_fn = nn.CrossEntropyLoss()
-    optimiser = torch.optim.Adam(cnn.parameters(),
+    optimiser = torch.optim.Adam(vggish.parameters(),
                                  lr=LEARNING_RATE)
 
     # train model
-    train(cnn, train_dataloader, loss_fn, optimiser, device, EPOCHS)
+    # train(vggish, train_dataloader, loss_fn, optimiser, device, EPOCHS)
 
     # save model
-    torch.save(cnn.state_dict(), "feedforwardnet.pth")
+    # torch.save(vggish_model.state_dict(), "vggish_net.pth")
     print("Trained feed forward net saved at feedforwardnet.pth")
