@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     usd = UrbanSoundDataset(ANNOTATIONS_FILE,
                             AUDIO_DIR,
-                            spectogram_transform,
+                            mfcc_transform,
                             SAMPLE_RATE,
                             NUM_SAMPLES,
                             device)
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     # cnn = CNNNetwork().to(device)
     # print(cnn)
 
-    resnet_model = resnet34(weights=ResNet34_Weights.DEFAULT)
+    resnet_model = resnet34()
     resnet_model.fc = nn.Linear(512,10)
     resnet_model.conv1 = nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
     resnet_model = resnet_model.to(device)  

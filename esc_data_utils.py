@@ -10,6 +10,11 @@ import torchaudio
 
 import pickle
 
+from torch.utils.tensorboard import SummaryWriter
+
+
+writer = SummaryWriter()
+
 ########################
 # TRANSFORM DATA TOOLS #
 ########################
@@ -180,6 +185,8 @@ def train(model, train_loader, valid_loader, epochs=100, learning_rate=2e-5, dec
             opt = learning_rate_decay(opt, e, learning_rate)
         
         zx = 0
+        correct = 0
+        total = 0
         for i, data in enumerate(train_loader):
             zx += 1
             x,y = data
@@ -199,10 +206,16 @@ def train(model, train_loader, valid_loader, epochs=100, learning_rate=2e-5, dec
             batch_losses.append(loss.item())
             # optimize gradients
             opt.step()
+            _, predicted = preds.max(1)
+            total += y.size(0)
+            correct += predicted.eq(y).sum().item()
             sys.stdout.write('\r'+zf)
         # use collected batch loss to track training loss
         train_losses.append(batch_losses)
-        print(f'Epoch - {e} Train-Loss: {np.mean(train_losses[-1])}')
+        train_accuracy = correct / total
+        writer.add_scalar('Train/Loss', np.mean(train_losses[-1]), e)
+        writer.add_scalar('Train/Accuracy', train_accuracy, e)
+        print(f'Epoch - {e} Train-Loss: {np.mean(train_losses[-1])} Train Accuracy: {train_accuracy}')
 
         # set model to evaluate
         model.eval()
@@ -233,8 +246,12 @@ def train(model, train_loader, valid_loader, epochs=100, learning_rate=2e-5, dec
         trace_pred = np.concatenate(trace_pred)
 
         acc = np.mean(trace_pred.argmax(axis=1) == trace_y)
+        writer.add_scalar('Validation/Loss', np.mean(valid_losses[-1]), e)
+        writer.add_scalar('Validation/Accuracy', acc, e)
 
         print(f'Epoch - {e} Valid-Loss: {np.mean(valid_losses[-1])} Valid Accuracy: {acc}')
+
+        writer.close()
    
     return model
 
