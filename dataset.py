@@ -80,6 +80,15 @@ def plot_spectrogram(specgram, title=None, ylabel="freq_bin"):
     fig.colorbar(im, ax=axs)
     plt.show(block=True)
 
+def plot_mfcc_spectrogram(specgram, title=None, ylabel="freq_bin"):
+    fig, axs = plt.subplots(1, 1)
+    axs.set_title(title or "Spectrogram (db)")
+    axs.set_ylabel(ylabel)
+    axs.set_xlabel("frame")
+    im = axs.imshow(specgram, origin="lower", aspect="auto")
+    fig.colorbar(im, ax=axs)
+    plt.show(block=True)
+
 
 if __name__ == "__main__":
     ANNOTATIONS_FILE = ".data/UrbanSound8K/metadata/UrbanSound8K.csv"
@@ -100,14 +109,18 @@ if __name__ == "__main__":
         n_mels=64
     )
 
-    mfcc_transform = torchaudio.transforms.MFCC(sample_rate=SAMPLE_RATE,n_mfcc=64)
+    mfcc_transform = torchaudio.transforms.MFCC(sample_rate=SAMPLE_RATE,n_mfcc=20,melkwargs=dict(n_fft=200, n_mels=64))
 
-    usd = UrbanSoundDataset(ANNOTATIONS_FILE,
-                            AUDIO_DIR,
-                            mel_spectrogram,
-                            SAMPLE_RATE,
-                            NUM_SAMPLES,
-                            device)
+    spectogram_transform = torchaudio.transforms.Spectrogram(
+        n_fft=1024,
+        hop_length=512)
+
+    # usd = UrbanSoundDataset(ANNOTATIONS_FILE,
+    #                         AUDIO_DIR,
+    #                         mel_spectrogram,
+    #                         SAMPLE_RATE,
+    #                         NUM_SAMPLES,
+    #                         device)
     
     # usd = UrbanSoundDataset(ANNOTATIONS_FILE,
     #                         AUDIO_DIR,
@@ -115,6 +128,14 @@ if __name__ == "__main__":
     #                         SAMPLE_RATE,
     #                         NUM_SAMPLES,
     #                         device)
+
+    usd = UrbanSoundDataset(ANNOTATIONS_FILE,
+                            AUDIO_DIR,
+                            spectogram_transform,
+                            SAMPLE_RATE,
+                            NUM_SAMPLES,
+                            device)
+    
     print(f"There are {len(usd)} samples in the dataset.")
     print(str(torchaudio.get_audio_backend()))
     signal, label = usd[10]
@@ -122,4 +143,4 @@ if __name__ == "__main__":
     # # plt.colorbar()
     # plt.show()
     plot_spectrogram(signal[0], title="MelSpectrogram - torchaudio", ylabel="mel freq")
-    # plot_spectrogram(signal[0], title="MFCC - torchaudio", ylabel="MFCC")
+    plot_mfcc_spectrogram(signal[0], title="MFCC - torchaudio", ylabel="MFCC")
