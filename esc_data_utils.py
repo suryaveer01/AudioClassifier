@@ -12,8 +12,16 @@ import pickle
 
 from torch.utils.tensorboard import SummaryWriter
 
+from sklearn.metrics import confusion_matrix
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 writer = SummaryWriter()
+
+# labels from esc50 dataset
+class_names = ['Dog','Rooster','Pig','Cow','Frog','Cat','Hen','Insects (flying)','Sheep','Crow','Rain','Sea waves','Crackling fire','Crickets','Chirping birds','Water drops','Wind','Pouring water','Toilet flush','Thunderstorm','Crying baby','Sneezing','Clapping','Breathing','Coughing','Footsteps','Laughing','Brushing teeth','Snoring','Drinking, sipping','Door knock','Mouse click','Keyboard typing','Door, wood creaks','Can opening','Washing machine','Vacuum cleaner','Clock alarm','Clock tick','Glass breaking','Helicopter','Chainsaw','Siren','Car horn','Engine','Train','Church bells','Airplane','Fireworks','Hand saw']
 
 ########################
 # TRANSFORM DATA TOOLS #
@@ -250,6 +258,86 @@ def train(model, train_loader, valid_loader, epochs=100, learning_rate=2e-5, dec
         writer.add_scalar('Validation/Accuracy', acc, e)
 
         print(f'Epoch - {e} Valid-Loss: {np.mean(valid_losses[-1])} Valid Accuracy: {acc}')
+
+        writer.close()
+   
+    return model
+
+def test(model, train_loader, valid_loader, epochs=10, learning_rate=2e-5, decay=True):
+
+    '''
+    training loop for model
+    '''
+    # check GPU availabilty
+    if torch.cuda.is_available():
+
+        device=torch.device('cuda:0')
+    else:
+
+        device=torch.device('cpu')
+    # set necessary variables for training
+    loss_func = nn.CrossEntropyLoss()
+    learning_rate = learning_rate
+    opt = optim.Adam(model.parameters(), lr=learning_rate)
+    epochs = epochs
+
+    train_losses = []
+    valid_losses = []
+
+    for e in range(1, epochs + 1):
+        batch_losses = []
+        y_true = []
+        y_pred = []
+
+        if decay:
+            opt = learning_rate_decay(opt, e, learning_rate)
+        
+        # set model to evaluate
+        model.eval()
+
+        batch_losses = []
+        trace_y = []
+        trace_pred = []
+
+        zx = 0
+        for i, data in enumerate(valid_loader):
+            zx += 1
+            x, y = data 
+            # y_true.append(y)
+            # set data to GPU
+            x = x.to(device, dtype=torch.float32)
+            y = y.to(device, dtype=torch.long)
+            zf = ('[i] FORWARD' + '-' * (zx//4) + '> *  ')
+            # forward pass
+            preds = model(x)
+            # calculate loss
+            loss = loss_func(preds, y)
+            # collect loss data to generate current model accuracy
+            trace_y.append(y.cpu().detach().numpy())
+            trace_pred.append(preds.cpu().detach().numpy())
+            batch_losses.append(loss.item())
+            # y_pred.extend(preds.numpy())
+            sys.stdout.write('\r'+zf)
+        valid_losses.append(batch_losses)
+        trace_y = np.concatenate(trace_y)
+        trace_pred = np.concatenate(trace_pred)
+
+        acc = np.mean(trace_pred.argmax(axis=1) == trace_y)
+
+        cm = confusion_matrix(trace_y, trace_pred.argmax(axis=1))
+        print(cm,'cm')
+
+        sns.set()
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(cm, annot=True, cmap='Blues', fmt='g', xticklabels=class_names, yticklabels=class_names)
+        plt.xlabel('Predicted label')
+        plt.ylabel('True label')
+        # plt.show()
+
+        writer.add_scalar('Test/Loss', np.mean(valid_losses[-1]), e)
+        writer.add_scalar('Test/Accuracy', acc, e)
+
+        print(f'Epoch - {e} Test-Loss: {np.mean(valid_losses[-1])} Test Accuracy: {acc}')
 
         writer.close()
    

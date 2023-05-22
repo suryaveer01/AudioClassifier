@@ -5,3 +5,7 @@ models/
 *.pth
 __pycache__/
 *.zip
+Oldmodels/idx2cat.pkl
+runs/
+Oldruns/
+Oldmodels/
